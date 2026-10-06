@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>World Cup Ladder</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <h1>World Cup Ladder</h1>
+      <div class="topbar-actions">
+        <span id="last-updated" class="last-updated">Last updated: —</span>
+        <button id="sync-btn" type="button">Sync</button>
+      </div>
+    </header>
+
+    <!-- Transient status line (syncing / sync failed messages) -->
+    <div id="status" class="status" role="status" aria-live="polite" hidden></div>
+
+    <main>
+      <!-- Loading state -->
+      <section id="state-loading" class="state">
+        <div class="spinner" aria-hidden="true"></div>
+        <p>Loading ladder…</p>
+      </section>
+
+      <!-- No data state -->
+      <section id="state-empty" class="state" hidden>
+        <p>No data yet. Press <strong>Sync</strong> to fetch the latest ladder.</p>
+      </section>
+
+      <!-- Data available -->
+      <section id="state-data" hidden>
+        <h2 class="section-title">Ranking</h2>
+        <div id="graph" class="graph" aria-label="Points ranking graph"></div>
+
+        <table class="ladder" aria-label="Player ladder">
+          <thead>
+            <tr>
+              <th class="col-rank">Rank</th>
+              <th class="col-name">Player</th>
+              <th class="col-category">Category</th>
+              <th class="col-points">Points</th>
+            </tr>
+          </thead>
+          <tbody id="ladder-body"></tbody>
+        </table>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>

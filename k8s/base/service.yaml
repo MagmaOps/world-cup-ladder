@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: world-cup-ladder
+  labels:
+    app: world-cup-ladder
+spec:
+  type: ClusterIP
+  selector:
+    app: world-cup-ladder
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

@@ -1,0 +1,17 @@
+{
+  "name": "world-cup-ladder",
+  "version": "1.0.0",
+  "description": "Temporary web app displaying a padel player ladder sourced from a published Google Spreadsheet.",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.8.1",
+    "express": "^4.21.2"
+  }
+}

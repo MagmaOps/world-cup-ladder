@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: world-cup-ladder
+  labels:
+    app: world-cup-ladder
+spec:
+  replicas: 1
+  # SQLite on a ReadWriteOnce volume must not be opened by two pods at once.
+  # Recreate ensures the old pod releases the volume before the new one starts.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: world-cup-ladder
+  template:
+    metadata:
+      labels:
+        app: world-cup-ladder
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+        - name: world-cup-ladder
+          image: world-cup-ladder
+          ports:
+            - name: http
+              containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: world-cup-ladder
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: world-cup-ladder-data

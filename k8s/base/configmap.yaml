@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: world-cup-ladder
+data:
+  # Default source: CSV export of the published Google Sheet. Override per
+  # environment from the cluster repo overlay if the sheet changes.
+  SOURCE_URL: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTLWEqvGmL5UhP1wKBpMyus9nNlNh_OehPrwkmcyTWBNLS_d4QinlPKLVdZNdrZj_DtNqyit_quFUfh/pub?gid=1410145111&single=true&output=csv"
+  SYNC_INTERVAL_MINUTES: "60"
+  DATABASE_PATH: "/data/world-cup-ladder.db"
+  PORT: "8080"
