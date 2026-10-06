@@ -16,4 +16,4 @@ labels:
 images:
   - name: world-cup-ladder
     newName: world-cup-ladder
-    newTag: latest
+    newTag: 1.0.2
