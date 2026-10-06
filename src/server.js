@@ -2,7 +2,7 @@ import express from 'express';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { config } from './config.js';
-import { getPlayers, getLastSuccessfulSync } from './db.js';
+import { getPlayers, getLastSuccessfulSync, getHistory } from './db.js';
 import { runSync } from './sync.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -21,6 +21,11 @@ app.get('/api/players', (_req, res) => {
   const players = getPlayers();
   const lastSuccessfulSync = getLastSuccessfulSync();
   res.json({ players, lastSuccessfulSync });
+});
+
+app.get('/api/history', (_req, res) => {
+  const { timestamps, series } = getHistory();
+  res.json({ timestamps, series, lastSuccessfulSync: getLastSuccessfulSync() });
 });
 
 app.post('/api/sync', async (_req, res) => {

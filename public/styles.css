@@ -95,30 +95,6 @@ main {
   padding: 1.5rem;
 }
 
-.state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-  padding: 3rem 1rem;
-  color: var(--muted);
-}
-
-.spinner {
-  width: 36px;
-  height: 36px;
-  border: 3px solid var(--border);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 .section-title {
   font-size: 1.05rem;
   color: var(--muted);
@@ -126,6 +102,213 @@ main {
   text-transform: uppercase;
   letter-spacing: 1px;
   margin: 0 0 0.75rem;
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  padding: 0.6rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.tab:hover {
+  color: var(--text);
+}
+
+.tab.is-active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.tab-panel {
+  margin-bottom: 2rem;
+}
+
+/* Time-series chart */
+.chart-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.chart-controls-label {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.toggle-group {
+  display: inline-flex;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.toggle {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.toggle + .toggle {
+  border-left: 1px solid var(--border);
+}
+
+.toggle:hover {
+  color: var(--text);
+}
+
+.toggle.is-active {
+  background: var(--accent);
+  color: #06101d;
+}
+
+.timeseries {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+/* Hover scrubber + markers */
+.ts-capture {
+  cursor: crosshair;
+}
+
+.ts-scrubber {
+  stroke: var(--muted);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+  pointer-events: none;
+}
+
+.ts-marker {
+  stroke: var(--surface);
+  stroke-width: 1.5;
+  pointer-events: none;
+}
+
+/* Hover tooltip */
+.ts-tooltip {
+  position: absolute;
+  z-index: 2;
+  min-width: 150px;
+  max-width: 240px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem 0.6rem;
+  font-size: 0.8rem;
+  pointer-events: none;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+
+.ts-tooltip-time {
+  color: var(--muted);
+  font-size: 0.75rem;
+  margin-bottom: 0.35rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.3rem;
+}
+
+.ts-tooltip-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 1px 0;
+}
+
+.ts-tooltip-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.ts-tooltip-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ts-tooltip-val {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  text-align: right;
+}
+
+.ts-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.ts-grid {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.ts-axis-label {
+  fill: var(--muted);
+  font-size: 11px;
+}
+
+.ts-line {
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.chart-empty {
+  color: var(--muted);
+  text-align: center;
+  padding: 2.5rem 1rem;
+  margin: 0;
+}
+
+.ts-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin-top: 0.9rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--border);
+}
+
+.ts-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  color: var(--text);
+}
+
+.ts-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
 }
 
 /* Ranking graph (horizontal bars) */

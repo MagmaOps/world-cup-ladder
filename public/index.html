@@ -19,21 +19,60 @@
     <div id="status" class="status" role="status" aria-live="polite" hidden></div>
 
     <main>
-      <!-- Loading state -->
-      <section id="state-loading" class="state">
-        <div class="spinner" aria-hidden="true"></div>
-        <p>Loading ladder…</p>
-      </section>
-
-      <!-- No data state -->
-      <section id="state-empty" class="state" hidden>
-        <p>No data yet. Press <strong>Sync</strong> to fetch the latest ladder.</p>
-      </section>
-
       <!-- Data available -->
-      <section id="state-data" hidden>
-        <h2 class="section-title">Ranking</h2>
-        <div id="graph" class="graph" aria-label="Points ranking graph"></div>
+      <section id="state-data">
+        <div class="tabs" role="tablist" aria-label="Graphs">
+          <button
+            id="tab-ranking"
+            class="tab is-active"
+            role="tab"
+            type="button"
+            aria-selected="true"
+            aria-controls="panel-ranking"
+          >
+            Ranking
+          </button>
+          <button
+            id="tab-timeseries"
+            class="tab"
+            role="tab"
+            type="button"
+            aria-selected="false"
+            aria-controls="panel-timeseries"
+          >
+            Over Time
+          </button>
+        </div>
+
+        <!-- Tab 1: per-player points bar chart -->
+        <div
+          id="panel-ranking"
+          class="tab-panel"
+          role="tabpanel"
+          aria-labelledby="tab-ranking"
+        >
+          <div id="graph" class="graph" aria-label="Points ranking graph"></div>
+        </div>
+
+        <!-- Tab 2: score over time -->
+        <div
+          id="panel-timeseries"
+          class="tab-panel"
+          role="tabpanel"
+          aria-labelledby="tab-timeseries"
+          hidden
+        >
+          <div class="chart-controls">
+            <span class="chart-controls-label">Show:</span>
+            <div class="toggle-group" role="group" aria-label="Number of players">
+              <button type="button" class="toggle is-active" data-topn="5">Top 5</button>
+              <button type="button" class="toggle" data-topn="10">Top 10</button>
+              <button type="button" class="toggle" data-topn="15">Top 15</button>
+              <button type="button" class="toggle" data-topn="all">All</button>
+            </div>
+          </div>
+          <div id="chart-timeseries" class="timeseries" aria-label="Score over time"></div>
+        </div>
 
         <table class="ladder" aria-label="Player ladder">
           <thead>
