@@ -17,6 +17,8 @@ spec:
     metadata:
       labels:
         app: world-cup-ladder
+      annotations:
+        deployment.revision: "1"
     spec:
       securityContext:
         runAsNonRoot: true
