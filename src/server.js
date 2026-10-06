@@ -2,7 +2,7 @@ import express from 'express';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { config } from './config.js';
-import { getPlayers, getLastSuccessfulSync, getHistory } from './db.js';
+import { getPlayersWithDelta, getLastSuccessfulSync, getHistory } from './db.js';
 import { runSync } from './sync.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -18,7 +18,7 @@ app.get('/api/health', (_req, res) => {
 });
 
 app.get('/api/players', (_req, res) => {
-  const players = getPlayers();
+  const players = getPlayersWithDelta();
   const lastSuccessfulSync = getLastSuccessfulSync();
   res.json({ players, lastSuccessfulSync });
 });

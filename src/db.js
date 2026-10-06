@@ -55,6 +55,24 @@ const selectHistory = db.prepare(
   'SELECT synced_at, name, points FROM player_history ORDER BY synced_at ASC'
 );
 
+// Baseline points per player for the 24h delta: the most recent snapshot at or
+// before the cutoff. If a player has no snapshot that old (history younger than
+// 24h), fall back to their earliest snapshot so we still show movement since
+// tracking began.
+const selectBaselineAtOrBefore = db.prepare(`
+  SELECT name, points FROM player_history ph
+  WHERE synced_at = (
+    SELECT MAX(synced_at) FROM player_history
+    WHERE name = ph.name AND synced_at <= @cutoff
+  )
+`);
+const selectEarliest = db.prepare(`
+  SELECT name, points FROM player_history ph
+  WHERE synced_at = (
+    SELECT MIN(synced_at) FROM player_history WHERE name = ph.name
+  )
+`);
+
 // Atomically replace the entire player set, append a history snapshot, and
 // record the successful sync time. Wrapped in a transaction so a crash
 // mid-write can never leave partial data: either everything lands or nothing.
@@ -69,6 +87,25 @@ const replaceAllTxn = db.transaction((players, syncedAtIso) => {
 
 export function getPlayers() {
   return selectPlayers.all();
+}
+
+// Players plus a `delta24h` field: points gained (or lost) versus ~24h ago.
+// null when there is no baseline to compare against.
+export function getPlayersWithDelta(nowMs = Date.now()) {
+  const players = selectPlayers.all();
+
+  const cutoff = new Date(nowMs - 24 * 60 * 60 * 1000).toISOString();
+  const baseline = new Map();
+  // Earliest first so the at-or-before cutoff values overwrite them as the
+  // preferred baseline where available.
+  for (const r of selectEarliest.all()) baseline.set(r.name, r.points);
+  for (const r of selectBaselineAtOrBefore.all({ cutoff })) baseline.set(r.name, r.points);
+
+  return players.map((p) => {
+    const base = baseline.get(p.name);
+    const delta24h = base === undefined ? null : p.points - base;
+    return { ...p, delta24h };
+  });
 }
 
 export function getLastSuccessfulSync() {

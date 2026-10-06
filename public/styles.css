@@ -325,7 +325,8 @@ main {
 
 .bar-row {
   display: grid;
-  grid-template-columns: 2rem minmax(90px, 160px) 1fr auto;
+  /* rank | name | bar | points | delta (fixed, always reserved) */
+  grid-template-columns: 2rem minmax(90px, 160px) 1fr auto 4.5rem;
   align-items: center;
   gap: 0.75rem;
   font-size: 0.9rem;
@@ -359,9 +360,43 @@ main {
 }
 
 .bar-points {
+  text-align: right;
   font-variant-numeric: tabular-nums;
   color: var(--text);
   font-weight: 600;
+}
+
+/* Dedicated delta column in the bar chart: fixed width so bars never shift
+   whether or not a badge is present. */
+.bar-delta {
+  text-align: right;
+  min-width: 0;
+}
+
+/* 24h points-change badge */
+.delta {
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.delta-up {
+  color: var(--ok);
+  background: rgba(56, 211, 159, 0.14);
+}
+
+.delta-down {
+  color: var(--err);
+  background: rgba(255, 107, 107, 0.14);
+}
+
+.col-delta {
+  text-align: right;
+  white-space: nowrap;
+  width: 5rem;
 }
 
 /* Ladder table */
@@ -419,7 +454,7 @@ main {
 
 @media (max-width: 560px) {
   .bar-row {
-    grid-template-columns: 1.6rem 1fr auto;
+    grid-template-columns: 1.6rem 1fr auto 4rem;
   }
   .bar-track {
     display: none;

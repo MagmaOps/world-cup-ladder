@@ -73,6 +73,20 @@ function svg(tag, attrs) {
   return node;
 }
 
+// Build a coloured "+254" / "-30" badge for the last-24h points change.
+// Returns null when there's nothing meaningful to show (no baseline or no change).
+function deltaBadge(delta) {
+  if (delta === null || delta === undefined || delta === 0) return null;
+  const up = delta > 0;
+  const badge = el(
+    'span',
+    `delta ${up ? 'delta-up' : 'delta-down'}`,
+    `${up ? '+' : '−'}${Math.abs(delta).toLocaleString('en-GB')}`
+  );
+  badge.title = `${up ? 'Gained' : 'Lost'} ${Math.abs(delta).toLocaleString('en-GB')} points in the last 24h`;
+  return badge;
+}
+
 // ── Tab 1: per-player points bar chart ──────────────────────────────────────
 function renderGraph(players) {
   els.graph.replaceChildren();
@@ -89,8 +103,16 @@ function renderGraph(players) {
     const fill = el('div', 'bar-fill');
     fill.style.width = `${(p.points / maxPoints) * 100}%`;
     track.append(fill);
-    row.append(track, el('span', 'bar-points', p.points.toLocaleString('en-GB')));
 
+    const points = el('span', 'bar-points', p.points.toLocaleString('en-GB'));
+
+    // Delta gets its own always-present column so bars stay aligned whether or
+    // not a badge is shown.
+    const deltaCell = el('span', 'bar-delta');
+    const badge = deltaBadge(p.delta24h);
+    if (badge) deltaCell.append(badge);
+
+    row.append(track, points, deltaCell);
     els.graph.append(row);
   }
 }
@@ -358,6 +380,12 @@ function renderTable(players) {
     tr.append(catTd);
 
     tr.append(el('td', 'col-points', p.points.toLocaleString('en-GB')));
+
+    const deltaTd = el('td', 'col-delta');
+    const badge = deltaBadge(p.delta24h);
+    if (badge) deltaTd.append(badge);
+    tr.append(deltaTd);
+
     els.body.append(tr);
   }
 }
