@@ -214,7 +214,7 @@ main {
   position: absolute;
   z-index: 2;
   min-width: 150px;
-  max-width: 240px;
+  max-width: 280px;
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -222,9 +222,18 @@ main {
   font-size: 0.8rem;
   pointer-events: none;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+
+  /* Single shared grid so every score lines up in one column and every delta
+     in another: dot | name | score | delta. */
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  column-gap: 0.4rem;
+  row-gap: 2px;
 }
 
 .ts-tooltip-time {
+  grid-column: 1 / -1;
   color: var(--muted);
   font-size: 0.75rem;
   margin-bottom: 0.35rem;
@@ -232,12 +241,9 @@ main {
   padding-bottom: 0.3rem;
 }
 
-.ts-tooltip-row {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 1px 0;
+.ts-tooltip-delta {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .ts-tooltip-dot {

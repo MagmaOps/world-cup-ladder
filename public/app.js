@@ -225,7 +225,8 @@ function renderTimeseries() {
       root.append(svg('circle', { cx: lx, cy: ly, r: 3, fill: color }));
     }
 
-    return { name: s.name, color, byT };
+    // s.points is time-ascending; keep it for prev-sample delta lookups.
+    return { name: s.name, color, byT, samples: s.points };
   });
 
   // ── Hover layer ────────────────────────────────────────────────────────
@@ -289,6 +290,7 @@ function renderTimeseries() {
     scrubber.style.display = '';
 
     // Position markers and build tooltip rows for players present at this time.
+    // delta = change versus this player's previous sample (the spike size).
     const rows = [];
     lines.forEach((ln, i) => {
       if (ln.byT.has(t)) {
@@ -296,7 +298,12 @@ function renderTimeseries() {
         markers[i].setAttribute('cx', sx);
         markers[i].setAttribute('cy', y(val));
         markers[i].style.display = '';
-        rows.push({ name: ln.name, color: ln.color, val });
+
+        const sampleIdx = ln.samples.findIndex((pt) => pt.t === t);
+        const delta =
+          sampleIdx > 0 ? val - ln.samples[sampleIdx - 1].points : null;
+
+        rows.push({ name: ln.name, color: ln.color, val, delta });
       } else {
         markers[i].style.display = 'none';
       }
@@ -304,13 +311,23 @@ function renderTimeseries() {
 
     tooltip.replaceChildren();
     tooltip.append(el('div', 'ts-tooltip-time', shortTime(t)));
+
+    // The tooltip is a single grid (dot | name | score | delta). Cells are
+    // appended directly so every score lines up in one column and every delta
+    // in another, regardless of per-player badge presence.
     for (const r of rows) {
-      const row = el('div', 'ts-tooltip-row');
       const dot = el('span', 'ts-tooltip-dot');
       dot.style.background = r.color;
-      row.append(dot, el('span', 'ts-tooltip-name', r.name));
-      row.append(el('span', 'ts-tooltip-val', r.val.toLocaleString('en-GB')));
-      tooltip.append(row);
+      tooltip.append(dot);
+      tooltip.append(el('span', 'ts-tooltip-name', r.name));
+      tooltip.append(el('span', 'ts-tooltip-val', r.val.toLocaleString('en-GB')));
+
+      // Delta cell always added (keeps the grid column), badge only when the
+      // score changed at this spot — empty cell otherwise, so no stray space.
+      const deltaCell = el('span', 'ts-tooltip-delta');
+      const badge = deltaBadge(r.delta);
+      if (badge) deltaCell.append(badge);
+      tooltip.append(deltaCell);
     }
 
     // Position the tooltip in pixel space, flipping to the left of the
