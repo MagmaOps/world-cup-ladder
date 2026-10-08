@@ -147,4 +147,58 @@ export function getHistory() {
   return { timestamps, series };
 }
 
+// Top point-gainers per calendar day (UTC). For each player we take their last
+// recorded points on each day, and the day's gain is that value minus their
+// last value on the most recent earlier day they had data. Only positive gains
+// are kept, top 3 per day, and days with no gains are omitted. Returns:
+//   [{ date: 'YYYY-MM-DD', gains: [{ name, gain }] }]  (chronological)
+export function getDailyGains(topPerDay = 3, maxDays = 10) {
+  const rows = selectHistory.all(); // time-ascending
+
+  // byPlayer: name -> Map(dateStr -> lastPointsThatDay)
+  const byPlayer = new Map();
+  const allDates = new Set();
+
+  for (const r of rows) {
+    const date = r.synced_at.slice(0, 10); // ISO date portion (UTC)
+    allDates.add(date);
+    if (!byPlayer.has(r.name)) byPlayer.set(r.name, new Map());
+    // Rows are ascending, so the last write for a (player, date) is that day's
+    // closing value.
+    byPlayer.get(r.name).set(date, r.points);
+  }
+
+  const dates = [...allDates].sort();
+
+  const result = [];
+  for (const date of dates) {
+    const gains = [];
+
+    for (const [name, dayMap] of byPlayer) {
+      if (!dayMap.has(date)) continue;
+      const todayPoints = dayMap.get(date);
+
+      // Find this player's closing value on their most recent earlier day.
+      let prevPoints = null;
+      for (const d of dates) {
+        if (d >= date) break;
+        if (dayMap.has(d)) prevPoints = dayMap.get(d);
+      }
+
+      // No prior day: can't attribute a gain to this day, skip.
+      if (prevPoints === null) continue;
+
+      const gain = todayPoints - prevPoints;
+      if (gain > 0) gains.push({ name, gain });
+    }
+
+    gains.sort((a, b) => b.gain - a.gain || a.name.localeCompare(b.name));
+    const top = gains.slice(0, topPerDay);
+    if (top.length > 0) result.push({ date, gains: top });
+  }
+
+  // Keep only the most recent `maxDays` day-groups so the chart stays readable.
+  return maxDays > 0 ? result.slice(-maxDays) : result;
+}
+
 export default db;

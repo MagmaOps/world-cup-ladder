@@ -2,7 +2,12 @@ import express from 'express';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { config } from './config.js';
-import { getPlayersWithDelta, getLastSuccessfulSync, getHistory } from './db.js';
+import {
+  getPlayersWithDelta,
+  getLastSuccessfulSync,
+  getHistory,
+  getDailyGains,
+} from './db.js';
 import { runSync } from './sync.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -26,6 +31,10 @@ app.get('/api/players', (_req, res) => {
 app.get('/api/history', (_req, res) => {
   const { timestamps, series } = getHistory();
   res.json({ timestamps, series, lastSuccessfulSync: getLastSuccessfulSync() });
+});
+
+app.get('/api/daily-gains', (_req, res) => {
+  res.json({ days: getDailyGains(), lastSuccessfulSync: getLastSuccessfulSync() });
 });
 
 app.post('/api/sync', async (_req, res) => {

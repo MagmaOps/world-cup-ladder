@@ -317,6 +317,54 @@ main {
   flex: none;
 }
 
+/* Daily gains chart (grouped bars) */
+.dailygains {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.dg-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.dg-grid {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.dg-axis-label {
+  fill: var(--muted);
+  font-size: 11px;
+}
+
+.dg-bar {
+  transition: opacity 0.15s ease;
+}
+
+.dg-bar:hover {
+  opacity: 0.85;
+}
+
+.dg-value {
+  fill: var(--text);
+  font-size: 10px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.dg-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin-top: 0.9rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--border);
+}
+
 /* Ranking graph (horizontal bars) */
 .graph {
   display: flex;

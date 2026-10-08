@@ -10,25 +10,54 @@ const els = {
   data: document.getElementById('state-data'),
   graph: document.getElementById('graph'),
   chartTimeseries: document.getElementById('chart-timeseries'),
+  chartDailygains: document.getElementById('chart-dailygains'),
   body: document.getElementById('ladder-body'),
   tabRanking: document.getElementById('tab-ranking'),
   tabTimeseries: document.getElementById('tab-timeseries'),
+  tabDailygains: document.getElementById('tab-dailygains'),
   panelRanking: document.getElementById('panel-ranking'),
   panelTimeseries: document.getElementById('panel-timeseries'),
+  panelDailygains: document.getElementById('panel-dailygains'),
   toggleGroup: document.querySelector('.toggle-group'),
 };
 
-// Line colours; players beyond this count cycle through the palette.
+// Colour palette. Players cycle through it; extra players wrap around.
 const LINE_COLORS = [
   '#3ea6ff', '#7c5cff', '#38d39f', '#ffb020', '#ff6b6b',
   '#4dd0e1', '#ba68c8', '#aed581', '#f06292', '#90a4ae',
   '#ff8a65', '#9575cd', '#4db6ac', '#dce775', '#64b5f6',
 ];
 
+// Stable per-player colour so each player keeps the same colour across all
+// tabs (Over Time lines, Daily Gains bars, legends). Assigned by ranking order
+// from /api/players and reused everywhere via colorForPlayer(name).
+const playerColor = new Map();
+
+function assignPlayerColors(players) {
+  playerColor.clear();
+  players.forEach((p, i) => {
+    playerColor.set(p.name, LINE_COLORS[i % LINE_COLORS.length]);
+  });
+}
+
+function colorForPlayer(name) {
+  if (playerColor.has(name)) return playerColor.get(name);
+  // Fallback for a name not seen in the ranking yet: deterministic by hash so
+  // it stays stable within a session rather than shifting between renders.
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) | 0;
+  const color = LINE_COLORS[Math.abs(h) % LINE_COLORS.length];
+  playerColor.set(name, color);
+  return color;
+}
+
 // Last fetched history payload and the current top-N selection, so the toggle
 // can re-render without re-fetching.
 let historyData = { timestamps: [], series: [] };
 let topN = 5;
+
+// Last fetched daily-gains payload, so switching tabs re-renders from cache.
+let dailyGainsData = { days: [] };
 
 function setStatus(message, kind) {
   if (!message) {
@@ -206,8 +235,8 @@ function renderTimeseries() {
   // One line per visible player. Map each player's samples onto the shared
   // timeline by timestamp so gaps are handled gracefully. Capture per-player
   // metadata so the hover layer can look up values and dot positions.
-  const lines = visible.map((s, i) => {
-    const color = LINE_COLORS[i % LINE_COLORS.length];
+  const lines = visible.map((s) => {
+    const color = colorForPlayer(s.name);
     const byT = new Map(s.points.map((pt) => [pt.t, pt.points]));
 
     const coords = [];
@@ -347,11 +376,10 @@ function renderTimeseries() {
 
   // Legend.
   const legend = el('div', 'ts-legend');
-  visible.forEach((s, i) => {
-    const color = LINE_COLORS[i % LINE_COLORS.length];
+  visible.forEach((s) => {
     const item = el('span', 'ts-legend-item');
     const dot = el('span', 'ts-legend-dot');
-    dot.style.background = color;
+    dot.style.background = colorForPlayer(s.name);
     item.append(dot, el('span', null, s.name));
     legend.append(item);
   });
@@ -375,14 +403,135 @@ function shortTime(iso) {
   });
 }
 
+function shortDate(iso) {
+  // iso is 'YYYY-MM-DD'. Parse as UTC to match how days were grouped.
+  const d = new Date(`${iso}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    timeZone: 'UTC',
+  });
+}
+
+// ── Tab 3: top 3 point-gainers per day (grouped bar chart) ──────────────────
+function renderDailyGains() {
+  const host = els.chartDailygains;
+  host.replaceChildren();
+
+  const days = dailyGainsData.days || [];
+  if (days.length === 0) {
+    host.append(
+      el('p', 'chart-empty', 'No daily gains yet. Bars appear once players gain points across days.')
+    );
+    return;
+  }
+
+  // Geometry.
+  const width = 760;
+  const height = 360;
+  const margin = { top: 16, right: 16, bottom: 48, left: 56 };
+  const plotW = width - margin.left - margin.right;
+  const plotH = height - margin.top - margin.bottom;
+
+  let maxGain = 0;
+  for (const d of days) for (const g of d.gains) if (g.gain > maxGain) maxGain = g.gain;
+  maxGain = maxGain || 1;
+  const yTop = niceCeil(maxGain);
+
+  const y = (v) => margin.top + plotH - (v / yTop) * plotH;
+
+  const root = svg('svg', {
+    viewBox: `0 0 ${width} ${height}`,
+    class: 'dg-svg',
+    preserveAspectRatio: 'xMidYMid meet',
+    role: 'img',
+  });
+
+  // Y gridlines + labels.
+  const ySteps = 5;
+  for (let i = 0; i <= ySteps; i++) {
+    const val = (yTop / ySteps) * i;
+    const yy = y(val);
+    root.append(svg('line', { x1: margin.left, y1: yy, x2: margin.left + plotW, y2: yy, class: 'dg-grid' }));
+    const label = svg('text', { x: margin.left - 8, y: yy + 4, class: 'dg-axis-label', 'text-anchor': 'end' });
+    label.textContent = Math.round(val).toLocaleString('en-GB');
+    root.append(label);
+  }
+
+  // One group of up to 3 bars per day.
+  const groupW = plotW / days.length;
+  const groupPad = Math.min(18, groupW * 0.15);
+  const innerW = groupW - groupPad;
+
+  days.forEach((day, di) => {
+    const groupX = margin.left + di * groupW + groupPad / 2;
+    const n = day.gains.length;
+    const barGap = 4;
+    const barW = Math.max(4, (innerW - barGap * (n - 1)) / n);
+
+    day.gains.forEach((g, bi) => {
+      const bx = groupX + bi * (barW + barGap);
+      const by = y(g.gain);
+      const bh = margin.top + plotH - by;
+      // Stable per-player colour, consistent with the Over Time tab.
+      const color = colorForPlayer(g.name);
+
+      const rect = svg('rect', {
+        x: bx, y: by, width: barW, height: bh, rx: 2, fill: color, class: 'dg-bar',
+      });
+      const title = svg('title', {});
+      title.textContent = `${g.name}: +${g.gain.toLocaleString('en-GB')} on ${shortDate(day.date)}`;
+      rect.append(title);
+      root.append(rect);
+
+      // Value above the bar.
+      const vlabel = svg('text', {
+        x: bx + barW / 2, y: by - 4, class: 'dg-value', 'text-anchor': 'middle',
+      });
+      vlabel.textContent = `+${g.gain.toLocaleString('en-GB')}`;
+      root.append(vlabel);
+    });
+
+    // Day label under the group.
+    const dlabel = svg('text', {
+      x: groupX + innerW / 2, y: height - 26, class: 'dg-axis-label', 'text-anchor': 'middle',
+    });
+    dlabel.textContent = shortDate(day.date);
+    root.append(dlabel);
+  });
+
+  host.append(root);
+
+  // Legend of the distinct players shown, each with their stable colour.
+  const seen = new Set();
+  const legend = el('div', 'dg-legend');
+  for (const day of days) {
+    for (const g of day.gains) {
+      if (seen.has(g.name)) continue;
+      seen.add(g.name);
+      const item = el('span', 'ts-legend-item');
+      const dot = el('span', 'ts-legend-dot');
+      dot.style.background = colorForPlayer(g.name);
+      item.append(dot, el('span', null, g.name));
+      legend.append(item);
+    }
+  }
+  host.append(legend);
+}
+
 function selectTab(tab) {
-  const ranking = tab === 'ranking';
-  els.tabRanking.classList.toggle('is-active', ranking);
-  els.tabTimeseries.classList.toggle('is-active', !ranking);
-  els.tabRanking.setAttribute('aria-selected', String(ranking));
-  els.tabTimeseries.setAttribute('aria-selected', String(!ranking));
-  els.panelRanking.hidden = !ranking;
-  els.panelTimeseries.hidden = ranking;
+  const tabs = {
+    ranking: { btn: els.tabRanking, panel: els.panelRanking },
+    timeseries: { btn: els.tabTimeseries, panel: els.panelTimeseries },
+    dailygains: { btn: els.tabDailygains, panel: els.panelDailygains },
+  };
+  for (const [name, { btn, panel }] of Object.entries(tabs)) {
+    const active = name === tab;
+    btn.classList.toggle('is-active', active);
+    btn.setAttribute('aria-selected', String(active));
+    panel.hidden = !active;
+  }
 }
 
 function renderTable(players) {
@@ -410,6 +559,9 @@ function renderTable(players) {
 function render(data) {
   els.lastUpdated.textContent = formatSyncTime(data.lastSuccessfulSync);
   const players = data.players || [];
+  // Establish the stable per-player colour mapping (by ranking order) before
+  // any chart renders, so colours are consistent across tabs.
+  assignPlayerColors(players);
   renderGraph(players);
   renderTable(players);
 }
@@ -427,12 +579,20 @@ async function loadHistory() {
   renderTimeseries();
 }
 
+async function loadDailyGains() {
+  const res = await fetch('/api/daily-gains');
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  dailyGainsData = await res.json();
+  renderDailyGains();
+}
+
 async function init() {
   try {
     const data = await loadPlayers();
     render(data);
-    // History is non-blocking: the main view is already up.
+    // Secondary charts are non-blocking: the main view is already up.
     loadHistory().catch((err) => console.error('history load failed:', err));
+    loadDailyGains().catch((err) => console.error('daily gains load failed:', err));
   } catch (err) {
     // Report the error in the status line so the user can retry with Sync.
     setStatus(`Could not load data: ${err.message}`, 'error');
@@ -452,6 +612,7 @@ async function manualSync() {
       const data = await loadPlayers();
       render(data);
       await loadHistory();
+      await loadDailyGains();
     } else {
       const reason = result.error || `HTTP ${res.status}`;
       setStatus(`Sync failed: ${reason}. Showing previous data.`, 'error');
@@ -479,5 +640,6 @@ function onToggleClick(e) {
 els.syncBtn.addEventListener('click', manualSync);
 els.tabRanking.addEventListener('click', () => selectTab('ranking'));
 els.tabTimeseries.addEventListener('click', () => selectTab('timeseries'));
+els.tabDailygains.addEventListener('click', () => selectTab('dailygains'));
 els.toggleGroup.addEventListener('click', onToggleClick);
 init();
