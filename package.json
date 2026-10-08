@@ -1,6 +1,6 @@
 {
   "name": "world-cup-ladder",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Temporary web app displaying a padel player ladder sourced from a published Google Spreadsheet.",
   "type": "module",
   "main": "src/server.js",

@@ -2,13 +2,20 @@ import { config } from './config.js';
 import { parseCsv } from './csv.js';
 import { replaceAllPlayers, getLastSuccessfulSync } from './db.js';
 
-// Portuguese source headers -> internal fields. Matched case-insensitively and
-// trimmed so minor spreadsheet edits (capitalisation, stray spaces) don't break
-// parsing.
+// Source headers -> internal fields. Matched case-insensitively and trimmed so
+// minor spreadsheet edits (capitalisation, stray spaces) don't break parsing.
+// Both the original Portuguese display headers and the newer English CSV keys
+// are accepted, so a header rename on either side keeps syncing.
 const HEADER_MAP = {
+  // name
   jogadores: 'name',
+  user_name: 'name',
+  // category
   categoria: 'category',
+  category: 'category',
+  // points
   pontos: 'points',
+  total_points: 'points',
 };
 
 // Single in-process lock. replicas is fixed at 1 (see PDR), so an in-memory
