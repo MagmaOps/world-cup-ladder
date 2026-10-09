@@ -191,8 +191,11 @@ function renderTimeseries() {
     for (const pt of s.points) if (pt.points > maxPoints) maxPoints = pt.points;
   }
   maxPoints = maxPoints || 1;
-  // Round the y-axis top up to a tidy number.
-  const yTop = niceCeil(maxPoints);
+  // Cap the y-axis just above the leader (headroom ~2000) and use a fixed
+  // 1500-point gridline step, so the chart uses its full height with clean
+  // 0 / 1500 / 3000 / … labels.
+  const yStep = 1500;
+  const yTop = Math.max(yStep, Math.ceil((maxPoints + 2000) / yStep) * yStep);
 
   const x = (ms) => margin.left + ((ms - tMin) / tSpan) * plotW;
   const y = (pts) => margin.top + plotH - (pts / yTop) * plotH;
@@ -204,10 +207,10 @@ function renderTimeseries() {
     role: 'img',
   });
 
-  // Y gridlines + labels (5 steps).
-  const ySteps = 5;
+  // Y gridlines + labels, one every `yStep` points.
+  const ySteps = Math.round(yTop / yStep);
   for (let i = 0; i <= ySteps; i++) {
-    const val = (yTop / ySteps) * i;
+    const val = yStep * i;
     const yy = y(val);
     root.append(
       svg('line', {
