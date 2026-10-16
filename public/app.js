@@ -18,7 +18,9 @@ const els = {
   panelRanking: document.getElementById('panel-ranking'),
   panelTimeseries: document.getElementById('panel-timeseries'),
   panelDailygains: document.getElementById('panel-dailygains'),
-  toggleGroup: document.querySelector('.toggle-group'),
+  toggleGroup: document.querySelector('.toggle-group'), // top-N group (first)
+  tsRangeGroup: document.getElementById('ts-range-group'),
+  dgRangeGroup: document.getElementById('dg-range-group'),
 };
 
 // Colour palette. Players cycle through it; extra players wrap around.
@@ -55,6 +57,10 @@ function colorForPlayer(name) {
 // can re-render without re-fetching.
 let historyData = { timestamps: [], series: [] };
 let topN = 5;
+
+// Day-range filters for the two charts. 7 = last 7 days, 'all' = everything.
+let tsRangeDays = 7;
+let dgRangeDays = 7;
 
 // Last fetched daily-gains payload, so switching tabs re-renders from cache.
 let dailyGainsData = { days: [] };
@@ -147,11 +153,27 @@ function renderGraph(players) {
 }
 
 // ── Tab 2: score over time (SVG multi-line chart) ───────────────────────────
+// Keep only timestamps within the last `days` (relative to the newest sample),
+// and trim each series' points to match. days === 'all' returns input as-is.
+function filterHistoryByRange(data, days) {
+  if (days === 'all' || data.timestamps.length === 0) return data;
+  const newest = new Date(data.timestamps[data.timestamps.length - 1]).getTime();
+  const cutoff = newest - days * 24 * 60 * 60 * 1000;
+  const keep = (iso) => new Date(iso).getTime() >= cutoff;
+
+  const timestamps = data.timestamps.filter(keep);
+  const series = data.series.map((s) => ({
+    name: s.name,
+    points: s.points.filter((pt) => keep(pt.t)),
+  }));
+  return { ...data, timestamps, series };
+}
+
 function renderTimeseries() {
   const host = els.chartTimeseries;
   host.replaceChildren();
 
-  const { timestamps, series } = historyData;
+  const { timestamps, series } = filterHistoryByRange(historyData, tsRangeDays);
 
   // Need at least two timepoints to draw a meaningful line.
   if (timestamps.length < 2) {
@@ -422,7 +444,10 @@ function renderDailyGains() {
   const host = els.chartDailygains;
   host.replaceChildren();
 
-  const days = dailyGainsData.days || [];
+  const allDays = dailyGainsData.days || [];
+  // Range filter: last N day-groups, or all. Data is chronological.
+  const days =
+    dgRangeDays === 'all' ? allDays : allDays.slice(-dgRangeDays);
   if (days.length === 0) {
     host.append(
       el('p', 'chart-empty', 'No daily gains yet. Bars appear once players gain points across days.')
@@ -640,9 +665,32 @@ function onToggleClick(e) {
   renderTimeseries();
 }
 
+// Shared handler for a Range toggle group: parses data-range, sets the active
+// button, stores the value via setter, then re-renders.
+function makeRangeHandler(group, setRange, rerender) {
+  return (e) => {
+    const btn = e.target.closest('.toggle');
+    if (!btn) return;
+    const raw = btn.dataset.range;
+    setRange(raw === 'all' ? 'all' : Number.parseInt(raw, 10));
+    for (const b of group.querySelectorAll('.toggle')) {
+      b.classList.toggle('is-active', b === btn);
+    }
+    rerender();
+  };
+}
+
 els.syncBtn.addEventListener('click', manualSync);
 els.tabRanking.addEventListener('click', () => selectTab('ranking'));
 els.tabTimeseries.addEventListener('click', () => selectTab('timeseries'));
 els.tabDailygains.addEventListener('click', () => selectTab('dailygains'));
 els.toggleGroup.addEventListener('click', onToggleClick);
+els.tsRangeGroup.addEventListener(
+  'click',
+  makeRangeHandler(els.tsRangeGroup, (v) => { tsRangeDays = v; }, renderTimeseries)
+);
+els.dgRangeGroup.addEventListener(
+  'click',
+  makeRangeHandler(els.dgRangeGroup, (v) => { dgRangeDays = v; }, renderDailyGains)
+);
 init();

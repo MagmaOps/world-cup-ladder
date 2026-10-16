@@ -80,6 +80,11 @@
               <button type="button" class="toggle" data-topn="15">Top 15</button>
               <button type="button" class="toggle" data-topn="all">All</button>
             </div>
+            <span class="chart-controls-label">Range:</span>
+            <div class="toggle-group" id="ts-range-group" role="group" aria-label="Time range">
+              <button type="button" class="toggle is-active" data-range="7">Last 7 days</button>
+              <button type="button" class="toggle" data-range="all">All</button>
+            </div>
           </div>
           <div id="chart-timeseries" class="timeseries" aria-label="Score over time"></div>
         </div>
@@ -92,6 +97,13 @@
           aria-labelledby="tab-dailygains"
           hidden
         >
+          <div class="chart-controls">
+            <span class="chart-controls-label">Range:</span>
+            <div class="toggle-group" id="dg-range-group" role="group" aria-label="Time range">
+              <button type="button" class="toggle is-active" data-range="7">Last 7 days</button>
+              <button type="button" class="toggle" data-range="all">All</button>
+            </div>
+          </div>
           <div id="chart-dailygains" class="dailygains" aria-label="Top daily point gains"></div>
         </div>
 

@@ -152,7 +152,7 @@ export function getHistory() {
 // last value on the most recent earlier day they had data. Only positive gains
 // are kept, top 3 per day, and days with no gains are omitted. Returns:
 //   [{ date: 'YYYY-MM-DD', gains: [{ name, gain }] }]  (chronological)
-export function getDailyGains(topPerDay = 3, maxDays = 10) {
+export function getDailyGains(topPerDay = 3, maxDays = 30) {
   const rows = selectHistory.all(); // time-ascending
 
   // byPlayer: name -> Map(dateStr -> lastPointsThatDay)
