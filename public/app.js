@@ -37,7 +37,18 @@ const playerColor = new Map();
 
 function assignPlayerColors(players) {
   playerColor.clear();
-  players.forEach((p, i) => {
+  // Order by registration date (constant per player) so a player's colour never
+  // changes as ranks move. Players without a parseable date sort last, then by
+  // name, keeping the assignment deterministic.
+  const ordered = [...players].sort((a, b) => {
+    const ta = Date.parse(a.registeredAt);
+    const tb = Date.parse(b.registeredAt);
+    const va = Number.isNaN(ta) ? Infinity : ta;
+    const vb = Number.isNaN(tb) ? Infinity : tb;
+    if (va !== vb) return va - vb;
+    return a.name.localeCompare(b.name);
+  });
+  ordered.forEach((p, i) => {
     playerColor.set(p.name, LINE_COLORS[i % LINE_COLORS.length]);
   });
 }
@@ -56,7 +67,7 @@ function colorForPlayer(name) {
 // Last fetched history payload and the current top-N selection, so the toggle
 // can re-render without re-fetching.
 let historyData = { timestamps: [], series: [] };
-let topN = 5;
+let topN = 2;
 
 // Day-range filters for the two charts. 7 = last 7 days, 'all' = everything.
 let tsRangeDays = 7;
@@ -209,18 +220,31 @@ function renderTimeseries() {
   const tSpan = tMax - tMin || 1;
 
   let maxPoints = 0;
+  let minPoints = Infinity;
   for (const s of visible) {
-    for (const pt of s.points) if (pt.points > maxPoints) maxPoints = pt.points;
+    for (const pt of s.points) {
+      if (pt.points > maxPoints) maxPoints = pt.points;
+      if (pt.points < minPoints) minPoints = pt.points;
+    }
   }
   maxPoints = maxPoints || 1;
-  // Cap the y-axis just above the leader (headroom ~2000) and use a fixed
-  // 1500-point gridline step, so the chart uses its full height with clean
-  // 0 / 1500 / 3000 / … labels.
+  if (!Number.isFinite(minPoints)) minPoints = 0;
+
+  // Focus the y-axis on the visible lines' range (with padding) rather than
+  // always starting at 0 — so a few high scorers fill the chart instead of
+  // leaving a big blank band below them. Snapped to a 1500 gridline step for
+  // clean labels. yBottom floors at 0 so a single flat line still reads well.
   const yStep = 1500;
-  const yTop = Math.max(yStep, Math.ceil((maxPoints + 2000) / yStep) * yStep);
+  const span = maxPoints - minPoints;
+  const pad = Math.max(500, span * 0.15);
+  const yTop = Math.ceil((maxPoints + pad) / yStep) * yStep;
+  let yBottom = Math.floor((minPoints - pad) / yStep) * yStep;
+  if (yBottom < 0) yBottom = 0;
+  // Guarantee a non-zero visible range.
+  const yRange = yTop - yBottom || yStep;
 
   const x = (ms) => margin.left + ((ms - tMin) / tSpan) * plotW;
-  const y = (pts) => margin.top + plotH - (pts / yTop) * plotH;
+  const y = (pts) => margin.top + plotH - ((pts - yBottom) / yRange) * plotH;
 
   const root = svg('svg', {
     viewBox: `0 0 ${width} ${height}`,
@@ -229,10 +253,10 @@ function renderTimeseries() {
     role: 'img',
   });
 
-  // Y gridlines + labels, one every `yStep` points.
-  const ySteps = Math.round(yTop / yStep);
+  // Y gridlines + labels, one every `yStep` points from yBottom to yTop.
+  const ySteps = Math.round((yTop - yBottom) / yStep);
   for (let i = 0; i <= ySteps; i++) {
-    const val = yStep * i;
+    const val = yBottom + yStep * i;
     const yy = y(val);
     root.append(
       svg('line', {

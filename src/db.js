@@ -11,10 +11,11 @@ db.pragma('journal_mode = WAL');
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS players (
-    rank     INTEGER NOT NULL,
-    name     TEXT    NOT NULL,
-    category TEXT    NOT NULL,
-    points   INTEGER NOT NULL
+    rank          INTEGER NOT NULL,
+    name          TEXT    NOT NULL,
+    category      TEXT    NOT NULL,
+    points        INTEGER NOT NULL,
+    registered_at TEXT
   );
 
   CREATE TABLE IF NOT EXISTS sync_meta (
@@ -35,12 +36,21 @@ db.exec(`
     ON player_history (synced_at);
 `);
 
+// Migration for databases created before `registered_at` existed: add the
+// column if missing. SQLite has no "ADD COLUMN IF NOT EXISTS", so check first.
+{
+  const cols = db.prepare('PRAGMA table_info(players)').all();
+  if (!cols.some((c) => c.name === 'registered_at')) {
+    db.exec('ALTER TABLE players ADD COLUMN registered_at TEXT');
+  }
+}
+
 const selectPlayers = db.prepare(
-  'SELECT rank, name, category, points FROM players ORDER BY rank ASC'
+  'SELECT rank, name, category, points, registered_at AS registeredAt FROM players ORDER BY rank ASC'
 );
 const deletePlayers = db.prepare('DELETE FROM players');
 const insertPlayer = db.prepare(
-  'INSERT INTO players (rank, name, category, points) VALUES (@rank, @name, @category, @points)'
+  'INSERT INTO players (rank, name, category, points, registered_at) VALUES (@rank, @name, @category, @points, @registeredAt)'
 );
 const upsertMeta = db.prepare(
   `INSERT INTO sync_meta (key, value) VALUES (@key, @value)

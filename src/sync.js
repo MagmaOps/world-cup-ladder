@@ -16,6 +16,9 @@ const HEADER_MAP = {
   // points
   pontos: 'points',
   total_points: 'points',
+  // registration date (used for a stable per-player colour)
+  registration_date: 'registeredAt',
+  data_de_registo: 'registeredAt',
 };
 
 // Single in-process lock. replicas is fixed at 1 (see PDR), so an in-memory
@@ -72,11 +75,13 @@ export function buildPlayers(rows) {
     const category =
       cols.category !== undefined ? (row[cols.category] ?? '').trim() : '';
     const points = parsePoints(row[cols.points]);
+    const registeredAt =
+      cols.registeredAt !== undefined ? (row[cols.registeredAt] ?? '').trim() : '';
 
     // Skip padding/empty rows: a real player must have a name and valid points.
     if (name === '' || Number.isNaN(points)) continue;
 
-    players.push({ name, category, points });
+    players.push({ name, category, points, registeredAt });
   }
 
   // Guardrail: never treat an unexpectedly empty dataset as a success.
@@ -95,6 +100,7 @@ export function buildPlayers(rows) {
     name: p.name,
     category: p.category,
     points: p.points,
+    registeredAt: p.registeredAt,
   }));
 }
 
