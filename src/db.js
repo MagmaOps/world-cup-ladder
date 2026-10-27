@@ -34,6 +34,11 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_player_history_synced_at
     ON player_history (synced_at);
+
+  -- Composite index so per-player lookups (24h-delta baselines, daily gains)
+  -- can seek by name then range-scan by time instead of scanning the table.
+  CREATE INDEX IF NOT EXISTS idx_player_history_name_synced_at
+    ON player_history (name, synced_at);
 `);
 
 // Migration for databases created before `registered_at` existed: add the
@@ -69,18 +74,28 @@ const selectHistory = db.prepare(
 // before the cutoff. If a player has no snapshot that old (history younger than
 // 24h), fall back to their earliest snapshot so we still show movement since
 // tracking began.
+// Set-based baselines: one grouped pass to find the target timestamp per
+// player, joined back for its points. With idx_player_history_name_synced_at
+// this is fast even on a large history table (vs. the old per-row correlated
+// subqueries which scanned the whole table for every row).
 const selectBaselineAtOrBefore = db.prepare(`
-  SELECT name, points FROM player_history ph
-  WHERE synced_at = (
-    SELECT MAX(synced_at) FROM player_history
-    WHERE name = ph.name AND synced_at <= @cutoff
-  )
+  SELECT ph.name AS name, ph.points AS points
+  FROM player_history ph
+  JOIN (
+    SELECT name, MAX(synced_at) AS synced_at
+    FROM player_history
+    WHERE synced_at <= @cutoff
+    GROUP BY name
+  ) m ON m.name = ph.name AND m.synced_at = ph.synced_at
 `);
 const selectEarliest = db.prepare(`
-  SELECT name, points FROM player_history ph
-  WHERE synced_at = (
-    SELECT MIN(synced_at) FROM player_history WHERE name = ph.name
-  )
+  SELECT ph.name AS name, ph.points AS points
+  FROM player_history ph
+  JOIN (
+    SELECT name, MIN(synced_at) AS synced_at
+    FROM player_history
+    GROUP BY name
+  ) m ON m.name = ph.name AND m.synced_at = ph.synced_at
 `);
 
 // Atomically replace the entire player set, append a history snapshot, and
